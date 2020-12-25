@@ -1,5 +1,5 @@
 ---
-title: 'Merry Christmas! '
+title: Merry Christmas!
 author: baoliu
 date: '2020-12-25'
 slug: merry-christmas
@@ -10,8 +10,7 @@ tags:
 ---
 
 
-**Merry Christmas!**
-
+**Merry Christmas**
 
 **Dream It Possible**
 

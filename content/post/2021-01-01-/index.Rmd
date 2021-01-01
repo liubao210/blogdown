@@ -1,0 +1,12 @@
+---
+title: First post in 2021
+author: baoliu
+date: '2021-01-01'
+slug: first-post-in-2021
+categories: []
+tags: []
+---
+
+## **何其生动形象……**
+
+![](http://baoliu.ink:8118/common_data/share/pic1.jpg)

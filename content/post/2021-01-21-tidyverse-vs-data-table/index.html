@@ -1,0 +1,182 @@
+---
+title: tidyverse vs data.table
+author: baoliu
+date: '2021-01-21'
+slug: tidyverse-vs-data-table
+categories:
+  - R
+tags:
+  - tidyverse
+  - data.table
+output: 
+  html_document:
+    toc: true
+    toc_depth: 4
+    toc_float: 
+      collapsed: false
+      smooth_scroll: false
+      
+    df_print: paged
+    theme: cerulean
+---
+
+<script src="index_files/header-attrs/header-attrs.js"></script>
+<script src="index_files/htmlwidgets/htmlwidgets.js"></script>
+<script src="index_files/jquery/jquery.min.js"></script>
+<link href="index_files/datatables-css/datatables-crosstalk.css" rel="stylesheet" />
+<script src="index_files/datatables-binding/datatables.js"></script>
+<link href="index_files/dt-core/css/jquery.dataTables.min.css" rel="stylesheet" />
+<link href="index_files/dt-core/css/jquery.dataTables.extra.css" rel="stylesheet" />
+<script src="index_files/dt-core/js/jquery.dataTables.min.js"></script>
+<link href="index_files/crosstalk/css/crosstalk.css" rel="stylesheet" />
+<script src="index_files/crosstalk/js/crosstalk.min.js"></script>
+
+
+<pre class="r"><code>knitr::opts_chunk$set(echo = TRUE, warning = F, message = FALSE)
+library(data.table)
+library(dtplyr)
+library(dplyr, warn.conflicts = FALSE)
+library(nycflights13)
+library(tidyr)
+library(purrr)
+library(DT)
+
+dim(flights)</code></pre>
+<pre><code>## [1] 336776     19</code></pre>
+<pre class="r"><code>DT::datatable(head(flights))</code></pre>
+<div id="htmlwidget-1" style="width:100%;height:auto;" class="datatables html-widget"></div>
+<script type="application/json" data-for="htmlwidget-1">{"x":{"filter":"none","data":[["1","2","3","4","5","6"],[2013,2013,2013,2013,2013,2013],[1,1,1,1,1,1],[1,1,1,1,1,1],[517,533,542,544,554,554],[515,529,540,545,600,558],[2,4,2,-1,-6,-4],[830,850,923,1004,812,740],[819,830,850,1022,837,728],[11,20,33,-18,-25,12],["UA","UA","AA","B6","DL","UA"],[1545,1714,1141,725,461,1696],["N14228","N24211","N619AA","N804JB","N668DN","N39463"],["EWR","LGA","JFK","JFK","LGA","EWR"],["IAH","IAH","MIA","BQN","ATL","ORD"],[227,227,160,183,116,150],[1400,1416,1089,1576,762,719],[5,5,5,5,6,5],[15,29,40,45,0,58],["2013-01-01T10:00:00Z","2013-01-01T10:00:00Z","2013-01-01T10:00:00Z","2013-01-01T10:00:00Z","2013-01-01T11:00:00Z","2013-01-01T10:00:00Z"]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>year<\/th>\n      <th>month<\/th>\n      <th>day<\/th>\n      <th>dep_time<\/th>\n      <th>sched_dep_time<\/th>\n      <th>dep_delay<\/th>\n      <th>arr_time<\/th>\n      <th>sched_arr_time<\/th>\n      <th>arr_delay<\/th>\n      <th>carrier<\/th>\n      <th>flight<\/th>\n      <th>tailnum<\/th>\n      <th>origin<\/th>\n      <th>dest<\/th>\n      <th>air_time<\/th>\n      <th>distance<\/th>\n      <th>hour<\/th>\n      <th>minute<\/th>\n      <th>time_hour<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"columnDefs":[{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,11,15,16,17,18]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div id="dtplyr-vs-data.table" class="section level2">
+<h2>dtplyr vs data.table</h2>
+<div id="dtplyr接近于data.table但是还有差距" class="section level3">
+<h3>dtplyr接近于data.table但是还有差距</h3>
+</div>
+<div id="在data.table中使用管道符-相比-会增加运行时间" class="section level3">
+<h3>在data.table中使用管道符 %&gt;% 相比 [] 会增加运行时间</h3>
+<pre class="r"><code>flights_dt_1 &lt;- lazy_dt(flights)
+flights_dt_2 &lt;- data.table(flights)
+
+delay_by_dest &lt;- function(df) {
+  df %&gt;%
+    filter(!is.na(arr_delay)) %&gt;% 
+    group_by(dest) %&gt;% 
+    summarise(n = n(), delay = mean(arr_delay))
+}
+
+delay_by_datatable &lt;- function(df) {
+    na.omit(df, cols = &#39;arr_delay&#39;)[
+      , .(n = .N, delay = mean(arr_delay)), by = &#39;dest&#39;
+      ]
+}
+
+delay_by_datatable_2 &lt;- function(df) {
+  na.omit(df, cols = &#39;arr_delay&#39;) %&gt;% 
+    .[, .(n = .N, delay = mean(arr_delay)), by = &#39;dest&#39;]
+}
+
+bench::mark(
+  flights %&gt;% delay_by_dest(),
+  flights_dt_1 %&gt;% delay_by_dest(),
+  flights_dt_1 %&gt;% delay_by_dest() %&gt;% as_tibble(),
+  flights_dt_2 %&gt;% delay_by_datatable(),
+  flights_dt_2 %&gt;% delay_by_datatable_2(),
+  check = FALSE
+)</code></pre>
+<pre><code>## # A tibble: 5 x 6
+##   expression                                           min  median `itr/sec`
+##   &lt;bch:expr&gt;                                       &lt;bch:t&gt; &lt;bch:t&gt;     &lt;dbl&gt;
+## 1 flights %&gt;% delay_by_dest()                       35.6ms 36.72ms      25.9
+## 2 flights_dt_1 %&gt;% delay_by_dest()                 922.2us  1.03ms     805. 
+## 3 flights_dt_1 %&gt;% delay_by_dest() %&gt;% as_tibble()  32.1ms 32.53ms      28.5
+## 4 flights_dt_2 %&gt;% delay_by_datatable()             31.8ms 36.92ms      26.5
+## 5 flights_dt_2 %&gt;% delay_by_datatable_2()             28ms 31.08ms      32.7
+## # ... with 2 more variables: mem_alloc &lt;bch:byt&gt;, `gc/sec` &lt;dbl&gt;</code></pre>
+</div>
+</div>
+<div id="tidyr-vs-data.table" class="section level2">
+<h2>tidyr vs data.table</h2>
+<div id="data.table拥有更快的速度" class="section level3">
+<h3>data.table拥有更快的速度</h3>
+</div>
+<div id="melt比melt.data.table更快" class="section level3">
+<h3>melt()比melt.data.table()更快;</h3>
+<pre class="r"><code>reshape_by_tidyr_1 = function(df){
+  df %&gt;% 
+    pivot_longer(
+      cols = is.numeric,
+      names_to = &quot;metric&quot;,
+      values_to = &quot;value&quot;
+    )
+}
+
+reshape_by_tidyr_2 = function(df){
+  tokeep &lt;- which(sapply(df, is.numeric)) 
+  vars_selected = colnames(df)[tokeep]
+  
+  df %&gt;% 
+    pivot_longer(
+      cols = vars_selected,
+      names_to = &quot;metric&quot;,
+      values_to = &quot;value&quot;
+    )
+}
+
+reshape_by_datatable_1 = function(df){
+  tokeep &lt;- which(sapply(df, is.numeric)) 
+  vars_name = colnames(df)[tokeep]
+  
+  df %&gt;% 
+    melt(measure = vars_name)
+}
+
+reshape_by_datatable_2 = function(df){
+  tokeep &lt;- which(sapply(df, is.numeric)) 
+  vars_name = colnames(df)[tokeep]
+  
+  df %&gt;% 
+    melt.data.table(measure = vars_name)
+}
+
+bench::mark(
+  flights %&gt;% reshape_by_tidyr_1(),
+  # flights_dt_1 %&gt;% reshape_by_tidyr_1(),
+  flights %&gt;% reshape_by_tidyr_2(),
+  # flights_dt_1 %&gt;% reshape_by_tidyr_2() %&gt;% as_tibble(),
+  flights_dt_2 %&gt;% reshape_by_datatable_1(),
+  flights_dt_2 %&gt;% reshape_by_datatable_2(),
+  check = FALSE
+)</code></pre>
+<pre><code>## # A tibble: 4 x 6
+##   expression                                  min median `itr/sec` mem_alloc
+##   &lt;bch:expr&gt;                                &lt;bch&gt; &lt;bch:&gt;     &lt;dbl&gt; &lt;bch:byt&gt;
+## 1 flights %&gt;% reshape_by_tidyr_1()          558ms  558ms      1.79     493MB
+## 2 flights %&gt;% reshape_by_tidyr_2()          546ms  546ms      1.83     492MB
+## 3 flights_dt_2 %&gt;% reshape_by_datatable_1() 176ms  200ms      4.95     254MB
+## 4 flights_dt_2 %&gt;% reshape_by_datatable_2() 156ms  205ms      4.80     254MB
+## # ... with 1 more variable: `gc/sec` &lt;dbl&gt;</code></pre>
+</div>
+</div>
+<div id="purrr-vs-sapply" class="section level2">
+<h2>purrr vs sapply</h2>
+<div id="base-r拥有更快的速度" class="section level3">
+<h3>base R拥有更快的速度;</h3>
+<pre class="r"><code>t1 = flights$dep_time
+
+
+bench::mark(
+  t1 %&gt;% lapply(., function(x){x^2}),
+  lapply(t1, function(x){x^2}),
+  t1 %&gt;% map(~.x^2),
+  map(t1, ~.x^2),
+  check = FALSE
+)</code></pre>
+<pre><code>## # A tibble: 4 x 6
+##   expression                              min median `itr/sec` mem_alloc
+##   &lt;bch:expr&gt;                            &lt;bch&gt; &lt;bch:&gt;     &lt;dbl&gt; &lt;bch:byt&gt;
+## 1 t1 %&gt;% lapply(., function(x) { x^2 }) 327ms  409ms      2.44    2.57MB
+## 2 lapply(t1, function(x) { x^2 })       261ms  314ms      3.18    2.58MB
+## 3 t1 %&gt;% map(~.x^2)                     543ms  543ms      1.84    2.58MB
+## 4 map(t1, ~.x^2)                        588ms  588ms      1.70    2.57MB
+## # ... with 1 more variable: `gc/sec` &lt;dbl&gt;</code></pre>
+</div>
+</div>

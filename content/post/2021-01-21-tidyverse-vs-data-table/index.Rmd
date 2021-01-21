@@ -1,0 +1,148 @@
+---
+title: tidyverse vs data.table
+author: baoliu
+date: '2021-01-21'
+slug: tidyverse-vs-data-table
+categories:
+  - R
+tags:
+  - tidyverse
+  - data.table
+output: 
+  html_document:
+    toc: true
+    toc_depth: 4
+    toc_float: 
+      collapsed: false
+      smooth_scroll: false
+      
+    df_print: paged
+    theme: cerulean
+---
+
+```{r echo=T, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = FALSE)
+library(data.table)
+library(dtplyr)
+library(dplyr, warn.conflicts = FALSE)
+library(nycflights13)
+library(tidyr)
+library(purrr)
+library(DT)
+
+dim(flights)
+DT::datatable(head(flights))
+
+```
+
+
+## dtplyr vs data.table
+### dtplyr接近于data.table但是还有差距
+### 在data.table中使用管道符 %>% 相比 [] 会增加运行时间
+
+```{r}
+flights_dt_1 <- lazy_dt(flights)
+flights_dt_2 <- data.table(flights)
+
+delay_by_dest <- function(df) {
+  df %>%
+    filter(!is.na(arr_delay)) %>% 
+    group_by(dest) %>% 
+    summarise(n = n(), delay = mean(arr_delay))
+}
+
+delay_by_datatable <- function(df) {
+    na.omit(df, cols = 'arr_delay')[
+      , .(n = .N, delay = mean(arr_delay)), by = 'dest'
+      ]
+}
+
+delay_by_datatable_2 <- function(df) {
+  na.omit(df, cols = 'arr_delay') %>% 
+    .[, .(n = .N, delay = mean(arr_delay)), by = 'dest']
+}
+
+bench::mark(
+  flights %>% delay_by_dest(),
+  flights_dt_1 %>% delay_by_dest(),
+  flights_dt_1 %>% delay_by_dest() %>% as_tibble(),
+  flights_dt_2 %>% delay_by_datatable(),
+  flights_dt_2 %>% delay_by_datatable_2(),
+  check = FALSE
+)
+```
+
+
+## tidyr vs data.table
+### data.table拥有更快的速度
+### melt()比melt.data.table()更快; 
+
+```{r}
+reshape_by_tidyr_1 = function(df){
+  df %>% 
+    pivot_longer(
+      cols = is.numeric,
+      names_to = "metric",
+      values_to = "value"
+    )
+}
+
+reshape_by_tidyr_2 = function(df){
+  tokeep <- which(sapply(df, is.numeric)) 
+  vars_selected = colnames(df)[tokeep]
+  
+  df %>% 
+    pivot_longer(
+      cols = vars_selected,
+      names_to = "metric",
+      values_to = "value"
+    )
+}
+
+reshape_by_datatable_1 = function(df){
+  tokeep <- which(sapply(df, is.numeric)) 
+  vars_name = colnames(df)[tokeep]
+  
+  df %>% 
+    melt(measure = vars_name)
+}
+
+reshape_by_datatable_2 = function(df){
+  tokeep <- which(sapply(df, is.numeric)) 
+  vars_name = colnames(df)[tokeep]
+  
+  df %>% 
+    melt.data.table(measure = vars_name)
+}
+
+bench::mark(
+  flights %>% reshape_by_tidyr_1(),
+  # flights_dt_1 %>% reshape_by_tidyr_1(),
+  flights %>% reshape_by_tidyr_2(),
+  # flights_dt_1 %>% reshape_by_tidyr_2() %>% as_tibble(),
+  flights_dt_2 %>% reshape_by_datatable_1(),
+  flights_dt_2 %>% reshape_by_datatable_2(),
+  check = FALSE
+)
+
+```
+
+
+## purrr vs sapply
+### base R拥有更快的速度;
+
+```{r}
+t1 = flights$dep_time
+
+
+bench::mark(
+  t1 %>% lapply(., function(x){x^2}),
+  lapply(t1, function(x){x^2}),
+  t1 %>% map(~.x^2),
+  map(t1, ~.x^2),
+  check = FALSE
+)
+
+
+```
+

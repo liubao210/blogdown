@@ -1,0 +1,34 @@
+---
+title: 摘自Advanced R
+author: ''
+date: '2021-02-04'
+slug: 摘自advanced-r
+categories:
+  - R
+tags: []
+---
+
+<script src="index_files/header-attrs/header-attrs.js"></script>
+
+
+<div id="subsetting-a-tibble-with-always-returns-a-tibble" class="section level4">
+<h4>Subsetting a tibble with [ always returns a tibble:</h4>
+<pre class="r"><code>df &lt;- tibble::tibble(x = 1:3, y = 3:1, z = letters[1:3])
+
+str(df[&quot;x&quot;])</code></pre>
+<pre><code>## tibble [3 x 1] (S3: tbl_df/tbl/data.frame)
+##  $ x: int [1:3] 1 2 3</code></pre>
+<pre class="r"><code>str(df[, &quot;x&quot;])</code></pre>
+<pre><code>## tibble [3 x 1] (S3: tbl_df/tbl/data.frame)
+##  $ x: int [1:3] 1 2 3</code></pre>
+</div>
+<div id="by-default-subsetting-a-matrix-or-data-frame-with-a-single-number-a-single-name-or-a-logical-vector-containing-a-single-true-will-simplify-the-returned-output-i.e.-it-will-return-an-object-with-lower-dimensionality.-to-preserve-the-original-dimensionality-you-must-use-drop-false." class="section level4">
+<h4>By default, subsetting a matrix or data frame with a single number, a single name, or a logical vector containing a single TRUE, will simplify the returned output, i.e. it will return an object with lower dimensionality. To preserve the original dimensionality, you must use drop = FALSE.</h4>
+<pre class="r"><code>df &lt;- data.frame(a = 1:2, b = 1:2)
+str(df[, &quot;a&quot;])</code></pre>
+<pre><code>##  int [1:2] 1 2</code></pre>
+<pre class="r"><code>str(df[, &quot;a&quot;, drop = FALSE])</code></pre>
+<pre><code>## &#39;data.frame&#39;:    2 obs. of  1 variable:
+##  $ a: int  1 2</code></pre>
+<p>The default drop = TRUE behaviour is a common source of bugs in functions: you check your code with a data frame or matrix with multiple columns, and it works. Six months later, you (or someone else) uses it with a single column data frame and it fails with a mystifying error. When writing functions, get in the habit of always using drop = FALSE when subsetting a 2D object. <strong>For this reason, tibbles default to drop = FALSE, and [ always returns another tibble.</strong></p>
+</div>

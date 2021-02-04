@@ -1,0 +1,33 @@
+---
+title: 摘自Advanced R
+author: ''
+date: '2021-02-04'
+slug: 摘自advanced-r
+categories:
+  - R
+tags: []
+---
+
+
+#### Subsetting a tibble with [ always returns a tibble:
+
+```{r}
+df <- tibble::tibble(x = 1:3, y = 3:1, z = letters[1:3])
+
+str(df["x"])
+
+str(df[, "x"])
+```
+
+
+#### By default, subsetting a matrix or data frame with a single number, a single name, or a logical vector containing a single TRUE, will simplify the returned output, i.e. it will return an object with lower dimensionality. To preserve the original dimensionality, you must use drop = FALSE.
+
+```{r}
+df <- data.frame(a = 1:2, b = 1:2)
+str(df[, "a"])
+
+str(df[, "a", drop = FALSE])
+```
+
+
+The default drop = TRUE behaviour is a common source of bugs in functions: you check your code with a data frame or matrix with multiple columns, and it works. Six months later, you (or someone else) uses it with a single column data frame and it fails with a mystifying error. When writing functions, get in the habit of always using drop = FALSE when subsetting a 2D object. **For this reason, tibbles default to drop = FALSE, and [ always returns another tibble.**
